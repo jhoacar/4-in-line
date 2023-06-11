@@ -1,5 +1,6 @@
 app:
-	go build -o ${PWD}/bin/ ${PWD}/cmd/app
+	go build -o ${PWD}/bin/ ${PWD}/cmd/console
 run_app:
-	go build -o ${PWD}/bin/ ${PWD}/cmd/app
+	make app
 	${PWD}/bin/app
+

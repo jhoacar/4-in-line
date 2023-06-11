@@ -1,4 +1,4 @@
-package console
+package game
 
 import (
 	"github.com/jhoacar/4-in-line/internal/entities"
@@ -8,12 +8,12 @@ import (
 const SIZE_VALIDATION = byte(4)
 
 // Inherit from entities.Game
-type ConsoleGame struct {
+type MainGame struct {
 	entities.Game
 }
 
-func NewGame() *ConsoleGame {
-	game := &ConsoleGame{}
+func NewGame() *MainGame {
+	game := &MainGame{}
 	game.IsGameOver = false
 	game.Rows = 7
 	game.Columns = 6
@@ -26,7 +26,7 @@ func NewGame() *ConsoleGame {
 	return game
 }
 
-func (g *ConsoleGame) Move(dir byte) {
+func (g *MainGame) Move(dir byte) {
 	switch dir {
 	case entities.LEFT:
 		g.MoveLeft()
@@ -37,7 +37,7 @@ func (g *ConsoleGame) Move(dir byte) {
 	}
 }
 
-func (g *ConsoleGame) MoveLeft() {
+func (g *MainGame) MoveLeft() {
 	g.RowMovement[g.ActualPosition.Column] = entities.Empty
 	if g.ActualPosition.Column == 0 {
 		g.ActualPosition.Column = (len(g.RowMovement)) - 1
@@ -47,13 +47,13 @@ func (g *ConsoleGame) MoveLeft() {
 	g.RowMovement[g.ActualPosition.Column] = g.ActualPlayer
 }
 
-func (g *ConsoleGame) MoveRight() {
+func (g *MainGame) MoveRight() {
 	g.RowMovement[g.ActualPosition.Column] = entities.Empty
 	g.ActualPosition.Column = (g.ActualPosition.Column + 1) % (len(g.RowMovement))
 	g.RowMovement[g.ActualPosition.Column] = g.ActualPlayer
 }
 
-func (g *ConsoleGame) MoveDown() {
+func (g *MainGame) MoveDown() {
 
 	g.IsComingDown = !g.IsGameOver &&
 		g.IsValidRow(g.ActualPosition.Row+1) &&
@@ -76,21 +76,21 @@ func (g *ConsoleGame) MoveDown() {
 	}
 }
 
-func (g *ConsoleGame) IsValidRow(row int) bool {
+func (g *MainGame) IsValidRow(row int) bool {
 	return row >= 0 && row < int(g.Rows)
 }
 
-func (g *ConsoleGame) IsValidColumn(column int) bool {
+func (g *MainGame) IsValidColumn(column int) bool {
 	return column >= 0 && column < int(g.Columns)
 }
 
-func (g *ConsoleGame) ResetMovement() {
+func (g *MainGame) ResetMovement() {
 	g.ActualPosition.Row = -1
 	g.RowMovement[g.ActualPosition.Column] = entities.Empty
 	g.RowMovement[g.ActualPosition.Column] = g.ActualPlayer
 }
 
-func (g *ConsoleGame) TogglePlayer() {
+func (g *MainGame) TogglePlayer() {
 	if g.ActualPlayer == entities.Player1 {
 		g.ActualPlayer = entities.Player2
 	} else {
@@ -98,14 +98,14 @@ func (g *ConsoleGame) TogglePlayer() {
 	}
 }
 
-func (g *ConsoleGame) CheckBoard() bool {
+func (g *MainGame) CheckBoard() bool {
 	return g.CheckBoardHorizontal() ||
 		g.CheckBoardVertical() ||
 		g.CheckBoardPrimaryDiagonal() ||
 		g.CheckBoardSecondaryDiagonal()
 }
 
-func (g *ConsoleGame) CheckBoardHorizontal() bool {
+func (g *MainGame) CheckBoardHorizontal() bool {
 	for i := byte(0); i < g.Rows; i++ {
 		for j := byte(0); j < g.Columns-SIZE_VALIDATION+1; j++ {
 			if g.Board[i][j] != entities.Empty {
@@ -124,7 +124,7 @@ func (g *ConsoleGame) CheckBoardHorizontal() bool {
 	return false
 }
 
-func (g *ConsoleGame) CheckBoardVertical() bool {
+func (g *MainGame) CheckBoardVertical() bool {
 	for i := byte(0); i < g.Rows-SIZE_VALIDATION+1; i++ {
 		for j := byte(0); j < g.Columns; j++ {
 			if g.Board[i][j] != entities.Empty {
@@ -143,7 +143,7 @@ func (g *ConsoleGame) CheckBoardVertical() bool {
 	return false
 }
 
-func (g *ConsoleGame) CheckBoardPrimaryDiagonal() bool {
+func (g *MainGame) CheckBoardPrimaryDiagonal() bool {
 	for i := byte(0); i < g.Rows-SIZE_VALIDATION+1; i++ {
 		for j := byte(0); j < g.Columns-SIZE_VALIDATION+1; j++ {
 			if g.Board[i][j] != entities.Empty {
@@ -162,7 +162,7 @@ func (g *ConsoleGame) CheckBoardPrimaryDiagonal() bool {
 	return false
 }
 
-func (g *ConsoleGame) CheckBoardSecondaryDiagonal() bool {
+func (g *MainGame) CheckBoardSecondaryDiagonal() bool {
 	for i := byte(0); i < g.Rows-SIZE_VALIDATION+1; i++ {
 		for j := byte(0); j < g.Columns-SIZE_VALIDATION+1; j++ {
 			if g.Board[i+SIZE_VALIDATION-1][j] != entities.Empty {
@@ -179,4 +179,29 @@ func (g *ConsoleGame) CheckBoardSecondaryDiagonal() bool {
 		}
 	}
 	return false
+}
+
+func (g *MainGame) RestartGame() {
+	g.RestartBoard()
+	g.RestartRowMovement()
+}
+
+func (g *MainGame) RestartBoard() {
+	for y, cells := range g.Board {
+		for x := range cells {
+			g.Board[y][x] = entities.Empty
+		}
+	}
+}
+
+func (g *MainGame) RestartRowMovement() {
+	for i := range g.RowMovement {
+		g.RowMovement[i] = entities.Empty
+	}
+
+	g.ActualPlayer = entities.Player1
+	g.ActualPosition.Row = -1
+	g.ActualPosition.Column = 0
+
+	g.RowMovement[g.ActualPosition.Column] = g.ActualPlayer
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/jhoacar/4-in-line/internal/entities"
+	"github.com/jhoacar/4-in-line/pkg/game"
 	"github.com/nsf/termbox-go"
 )
 
@@ -39,7 +40,7 @@ var tokenCharacter = map[byte]termbox.Attribute{
 	entities.Player2: 'O',
 }
 
-func Render(g *ConsoleGame) {
+func Render(g *game.MainGame) {
 	termbox.Clear(backgroundColor, backgroundColor)
 
 	titleParsed := fmt.Sprintf(title, g.ActualPlayer, g.Rows, g.Columns)
@@ -83,7 +84,7 @@ func Render(g *ConsoleGame) {
 	termbox.Flush()
 }
 
-func renderMovementRow(g *ConsoleGame) {
+func renderMovementRow(g *game.MainGame) {
 	width, _ := termbox.Size()
 	rowMovementStartX := (width - int(g.Rows)*3) / 2
 	for x, cel := range g.RowMovement {
@@ -97,7 +98,7 @@ func renderMovementRow(g *ConsoleGame) {
 	}
 }
 
-func renderBoard(g *ConsoleGame) {
+func renderBoard(g *game.MainGame) {
 	width, _ := termbox.Size()
 	boardStartX := (width - int(g.Rows)*3) / 2
 

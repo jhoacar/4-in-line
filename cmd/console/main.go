@@ -6,6 +6,7 @@ import (
 
 	"github.com/jhoacar/4-in-line/internal/entities"
 	"github.com/jhoacar/4-in-line/pkg/console"
+	"github.com/jhoacar/4-in-line/pkg/game"
 	"github.com/nsf/termbox-go"
 )
 
@@ -26,7 +27,7 @@ func main() {
 		}
 	}()
 
-	g := console.NewGame()
+	g := game.NewGame()
 	console.Render(g)
 
 	for {
@@ -56,7 +57,7 @@ func main() {
 			case
 				unicode.ToUpper(ev.Ch) == 'R',
 				ev.Key == termbox.KeyF5:
-				g = console.NewGame()
+				g.RestartGame()
 			}
 		}
 		console.Render(g)

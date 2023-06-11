@@ -46,4 +46,8 @@ type Game struct {
 	CheckBoardVertical          func() bool
 	CheckBoardPrimaryDiagonal   func() bool
 	CheckBoardSecondaryDiagonal func() bool
+
+	RestartGame        func()
+	RestartBoard       func()
+	RestartRowMovement func()
 }
