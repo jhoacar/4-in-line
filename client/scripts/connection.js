@@ -16,22 +16,26 @@ class GameConnection {
       }
 
       if (window["WebSocket"]) {
-        this.socket = new WebSocket("ws://" + document.location.host + "/ws");
+        this.socket = new WebSocket(
+          `${document.location.protocol.replace("http", "ws")}//${
+            document.location.host
+          }/ws`
+        );
         this.socket.addEventListener("open", (event) => {
           console.debug("Connection: ", event);
           this.onConnection(event);
-          resolve(this.socket)
+          resolve(this.socket);
         });
-        this.socket.addEventListener("message", (event) =>{
+        this.socket.addEventListener("message", (event) => {
           console.debug("Message: ", event);
-          this.onMessage(event)
+          this.onMessage(event);
         });
         this.socket.addEventListener("close", (event) => {
           console.debug("Closed: ", event);
-          this.onClose(event)
+          this.onClose(event);
         });
         this.socket.addEventListener("error", (event) => {
-          console.debug("Error: ",event);
+          console.debug("Error: ", event);
           reject(event);
           this.onError(event);
         });
