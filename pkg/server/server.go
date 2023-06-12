@@ -12,7 +12,7 @@ import (
 )
 
 var port = flag.Int("port", 80, "port of server")
-var clientFolder = flag.String("client", "../client", "folder to serve client")
+var clientFolder = flag.String("client", "client", "folder to serve client")
 
 func serveClient(w http.ResponseWriter, r *http.Request) {
 
