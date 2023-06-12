@@ -190,7 +190,7 @@ class Game {
         this.render();
       }
     } catch (error) {
-      console.error("Wrong message from server");
+      console.error("Wrong message from server", error);
     }
   }
 
