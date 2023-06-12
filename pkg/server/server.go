@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-var port = flag.Int("port", 80, "port of server")
+var argPort = flag.Int("port", 80, "port of server")
 var clientFolder = flag.String("client", "client", "folder to serve client")
 
 func serveClient(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +45,15 @@ func serveClient(w http.ResponseWriter, r *http.Request) {
 
 func StartServer() {
 
-	addr := ":" + strconv.Itoa(*port)
+	addr := ":"
+	envPort := os.Getenv("PORT")
+
+	if len(envPort) != 0 {
+		addr = addr + envPort
+	} else {
+		addr = addr + strconv.Itoa(*argPort)
+
+	}
 
 	flag.Parse()
 
@@ -58,7 +66,7 @@ func StartServer() {
 		serveWs(hub, w, r)
 	})
 
-	log.Printf("Server running on port %d", *port)
+	log.Printf("Server running on %s", addr)
 	log.Printf("Serving %s", *clientFolder)
 
 	log.Fatal(http.ListenAndServe(addr, nil))
