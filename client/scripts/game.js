@@ -227,7 +227,7 @@ class Game {
   renderDetails() {
     const numberPlayer = document.getElementById(numberPlayerId);
     if (numberPlayer) {
-      numberPlayer.textContent = this.player;
+      numberPlayer.className = `player player-${this.player}`;
     }
     const numberGame = document.getElementById(numberGameId);
     if (numberGame) {
@@ -235,7 +235,7 @@ class Game {
     }
     const numberCurrent = document.getElementById(numberCurrentId);
     if (numberCurrent) {
-      numberCurrent.textContent = this.actualPlayer;
+      numberCurrent.className = `player player-${this.actualPlayer}`;
     }
   }
 
