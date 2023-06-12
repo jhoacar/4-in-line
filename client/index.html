@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>4 in line</title>
+    <link rel="icon" href="images/favicon.png" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="scripts/index.js" type="module" defer></script>
+  </head>
+  <body>
+    <div id="game">
+      <div id="title">
+        <h1 class="shadow">4 In Line</h1>
+      </div>
+      <div id="details">
+        <div class="shadow">
+          <p>
+            <b>
+              Player:
+              <span id="number-player"></span>
+            </b>
+          </p>
+          <p>
+            <b>
+              Game:
+              <span id="number-game"></span>
+            </b>
+          </p>
+          <p>
+            <b>
+              Player Turn:
+              <span id="number-current-player"></span>
+            </b>
+          </p>
+        </div>
+      </div>
+      <div id="movement"></div>
+      <div id="board"></div>
+      <div id="arrows">
+        <button id="arrow-left" class="shadow-button">
+          <img
+            width="10"
+            height="10"
+            src="images/arrow-left-solid.svg"
+            alt="⬅️"
+          />
+        </button>
+        <button id="arrow-down" class="shadow-button">
+          <img
+            width="10"
+            height="10"
+            src="images/arrow-down-solid.svg"
+            alt="➡️"
+          />
+        </button>
+        <button id="arrow-right" class="shadow-button">
+          <img
+            width="10"
+            height="10"
+            src="images/arrow-right-solid.svg"
+            alt="⬇️"
+          />
+        </button>
+      </div>
+      <div id="game-over">
+        <div class="shadow">
+          <b>Player <span id="winner-player"></span> has won</b>
+        </div>
+        <button class="shadow-button" id="restart">restart</button>
+      </div>
+    </div>
+    <div id="connection">
+      <button class="shadow-button">connect</button>
+    </div>
+    <div id="logs"></div>
+  </body>
+</html>

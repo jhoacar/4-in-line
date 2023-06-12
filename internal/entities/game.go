@@ -1,39 +1,41 @@
 package entities
 
 const (
-	DOWN byte = iota
+	DOWN int = iota
 	LEFT
 	RIGHT
 )
 
 const (
-	Empty byte = iota
+	Empty int = iota
 	Player1
 	Player2
 )
 
 type Position struct {
-	Row    int
-	Column int
+	Row    int `json:"row"`
+	Column int `json:"column"`
 }
 
-type Game struct {
-	Rows    byte
-	Columns byte
+type GameAttributes struct {
+	Rows    int `json:"rows"`
+	Columns int `json:"columns"`
 
-	RowMovement []byte
-	Board       [][]byte
+	RowMovement []int   `json:"movement"`
+	Board       [][]int `json:"board"`
 
-	ActualPlayer   byte
-	ActualPosition Position
+	ActualPlayer   int      `json:"actual_player"`
+	ActualPosition Position `json:"actual_position"`
 
-	Move      func(dir byte)
+	IsComingDown bool `json:"is_coming_down"`
+	IsGameOver   bool `json:"is_game_over"`
+}
+
+type GameMethods struct {
+	Move      func(dir int)
 	MoveLeft  func()
 	MoveRight func()
 	MoveDown  func()
-
-	IsComingDown bool
-	IsGameOver   bool
 
 	ResetMovement func()
 	TogglePlayer  func()
@@ -50,4 +52,8 @@ type Game struct {
 	RestartGame        func()
 	RestartBoard       func()
 	RestartRowMovement func()
+}
+type Game struct {
+	GameAttributes
+	GameMethods
 }

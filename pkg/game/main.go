@@ -5,7 +5,7 @@ import (
 	"github.com/jhoacar/4-in-line/pkg/table"
 )
 
-const SIZE_VALIDATION = byte(4)
+const SIZE_VALIDATION = int(4)
 
 // Inherit from entities.Game
 type MainGame struct {
@@ -20,13 +20,13 @@ func NewGame() *MainGame {
 	game.ActualPlayer = entities.Player1
 	game.ActualPosition.Column = 0
 	game.ActualPosition.Row = -1
-	game.Board = table.GetTable[byte](game.Rows, game.Columns)
-	game.RowMovement = make([]byte, game.Columns)
+	game.Board = table.GetTable[int](game.Rows, game.Columns)
+	game.RowMovement = make([]int, game.Columns)
 	game.RowMovement[game.ActualPosition.Column] = game.ActualPlayer
 	return game
 }
 
-func (g *MainGame) Move(dir byte) {
+func (g *MainGame) Move(dir int) {
 	switch dir {
 	case entities.LEFT:
 		g.MoveLeft()
@@ -106,11 +106,11 @@ func (g *MainGame) CheckBoard() bool {
 }
 
 func (g *MainGame) CheckBoardHorizontal() bool {
-	for i := byte(0); i < g.Rows; i++ {
-		for j := byte(0); j < g.Columns-SIZE_VALIDATION+1; j++ {
+	for i := int(0); i < g.Rows; i++ {
+		for j := int(0); j < g.Columns-SIZE_VALIDATION+1; j++ {
 			if g.Board[i][j] != entities.Empty {
-				count := byte(0)
-				for k := byte(0); k < SIZE_VALIDATION; k++ {
+				count := int(0)
+				for k := int(0); k < SIZE_VALIDATION; k++ {
 					if g.Board[i][j] == g.Board[i][j+k] {
 						count++
 					}
@@ -125,11 +125,11 @@ func (g *MainGame) CheckBoardHorizontal() bool {
 }
 
 func (g *MainGame) CheckBoardVertical() bool {
-	for i := byte(0); i < g.Rows-SIZE_VALIDATION+1; i++ {
-		for j := byte(0); j < g.Columns; j++ {
+	for i := int(0); i < g.Rows-SIZE_VALIDATION+1; i++ {
+		for j := int(0); j < g.Columns; j++ {
 			if g.Board[i][j] != entities.Empty {
-				count := byte(0)
-				for k := byte(0); k < SIZE_VALIDATION; k++ {
+				count := int(0)
+				for k := int(0); k < SIZE_VALIDATION; k++ {
 					if g.Board[i][j] == g.Board[i+k][j] {
 						count++
 					}
@@ -144,11 +144,11 @@ func (g *MainGame) CheckBoardVertical() bool {
 }
 
 func (g *MainGame) CheckBoardPrimaryDiagonal() bool {
-	for i := byte(0); i < g.Rows-SIZE_VALIDATION+1; i++ {
-		for j := byte(0); j < g.Columns-SIZE_VALIDATION+1; j++ {
+	for i := int(0); i < g.Rows-SIZE_VALIDATION+1; i++ {
+		for j := int(0); j < g.Columns-SIZE_VALIDATION+1; j++ {
 			if g.Board[i][j] != entities.Empty {
-				count := byte(0)
-				for k := byte(0); k < SIZE_VALIDATION; k++ {
+				count := int(0)
+				for k := int(0); k < SIZE_VALIDATION; k++ {
 					if g.Board[i][j] == g.Board[i+k][j+k] {
 						count++
 					}
@@ -163,11 +163,11 @@ func (g *MainGame) CheckBoardPrimaryDiagonal() bool {
 }
 
 func (g *MainGame) CheckBoardSecondaryDiagonal() bool {
-	for i := byte(0); i < g.Rows-SIZE_VALIDATION+1; i++ {
-		for j := byte(0); j < g.Columns-SIZE_VALIDATION+1; j++ {
+	for i := int(0); i < g.Rows-SIZE_VALIDATION+1; i++ {
+		for j := int(0); j < g.Columns-SIZE_VALIDATION+1; j++ {
 			if g.Board[i+SIZE_VALIDATION-1][j] != entities.Empty {
-				count := byte(0)
-				for k := byte(0); k < SIZE_VALIDATION; k++ {
+				count := int(0)
+				for k := int(0); k < SIZE_VALIDATION; k++ {
 					if g.Board[i+SIZE_VALIDATION-1][j] == g.Board[i+SIZE_VALIDATION-1-k][j+k] {
 						count++
 					}
@@ -184,6 +184,8 @@ func (g *MainGame) CheckBoardSecondaryDiagonal() bool {
 func (g *MainGame) RestartGame() {
 	g.RestartBoard()
 	g.RestartRowMovement()
+	g.IsComingDown = false
+	g.IsGameOver = false
 }
 
 func (g *MainGame) RestartBoard() {

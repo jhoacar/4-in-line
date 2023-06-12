@@ -22,19 +22,19 @@ const gameOverStartY = restartMessageStartY + 1
 const rowMovementStartY = gameOverStartY + 2
 const boardStartY = rowMovementStartY + 2
 
-var tokenForegroundColor = map[byte]termbox.Attribute{
+var tokenForegroundColor = map[int]termbox.Attribute{
 	entities.Empty:   termbox.ColorCyan,
 	entities.Player1: backgroundColor,
 	entities.Player2: backgroundColor,
 }
 
-var tokenBackgroundColor = map[byte]termbox.Attribute{
+var tokenBackgroundColor = map[int]termbox.Attribute{
 	entities.Empty:   termbox.ColorDarkGray,
 	entities.Player1: termbox.ColorGreen,
 	entities.Player2: termbox.ColorRed,
 }
 
-var tokenCharacter = map[byte]termbox.Attribute{
+var tokenCharacter = map[int]termbox.Attribute{
 	entities.Empty:   ' ',
 	entities.Player1: 'X',
 	entities.Player2: 'O',
