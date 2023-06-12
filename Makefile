@@ -1,11 +1,9 @@
-app:
+console:
 	go build -o ${PWD}/bin/ ${PWD}/cmd/console
-run_app:
-	make app
-	${PWD}/bin/app
-server:
+dev:
+	go run ${PWD}/cmd/console
+build:
 	go build -o ${PWD}/bin/ ${PWD}/cmd/server
-run_server:
-	make server
-	${PWD}/bin/server
+start:
+	go run ${PWD}/cmd/server --port 6060 --client ${PWD}/client
 
