@@ -1,20 +1,34 @@
 import GameConnection from "./connection.js";
 
-const DOWN_CODE = 0;
-const LEFT_CODE = 1;
-const RIGHT_CODE = 2;
+/**
+ * @typedef {import("./connection.js").GameConnectionEventData} GameConnectionEventData
+ */
+
+const DOWN = "down";
+const LEFT = "left";
+const RIGHT = "right";
 
 const gameBlockId = "game";
 const movementBlockId = "movement";
 const boardBlockId = "board";
 const conectionBlockId = "connection";
 
+const detailsBlockId = "details";
 const gameOverBlockId = "game-over";
+const connectBlockId = "connect";
+const waitingBlockId = "waiting";
 const restartButtonId = "restart";
 
+const inputNamePlayerId = "input-name-player";
+
 const numberPlayerId = "number-player";
+const namePlayerId = "name-player";
+
 const numberGameId = "number-game";
-const numberCurrentId = "number-current-player";
+
+const numberCurrentPlayerId = "number-current-player";
+const nameCurrentPlayerId = "name-current-player";
+
 const winnerPlayerId = "winner-player";
 
 const arrowLeftId = "arrow-left";
@@ -31,7 +45,7 @@ class Game {
    */
   player;
   /**
-   * @type {roomId}
+   * @type {number}
    */
   roomId;
   /**
@@ -70,24 +84,53 @@ class Game {
    */
   isGameOver;
   /**
-   *
-   * @param {GameConnection} connection
+   * @type {boolean}
    */
+  isEventsLoaded;
+  /**
+   * @type {string}
+   */
+  name;
+  /**
+   * @type {import("./connection.js").RoomResponse}
+   */
+  room;
+
   constructor() {
     this.connection = new GameConnection();
-    const button = document.querySelector(`#${conectionBlockId} button`);
-    if (!button) {
-      return;
+    const button = document.querySelector(`#${connectBlockId} button`);
+    if (button) {
+      button.addEventListener("click", () => this.handleConnect());
     }
-    button.addEventListener("click", () => this.handleConnect());
   }
 
   async handleConnect() {
-    const socket = await this.connection.connect();
+    const name = document.getElementById(inputNamePlayerId);
+    await this.connection.connect(name.value);
+    const connectBlock = document.getElementById(connectBlockId);
+    if (connectBlock) {
+      connectBlock.style.display = "none";
+    }
+    const waitingBlock = document.getElementById(waitingBlockId);
+    if (waitingBlock) {
+      waitingBlock.style.display = "block";
+    }
+    if (this.isEventsLoaded) {
+      return;
+    }
+    this.isEventsLoaded = true;
+
     this.addMoveEventListeners();
-    socket.addEventListener("message", (event) => this.onMessage(event));
-    socket.addEventListener("close", () => this.eraseAll());
-    socket.addEventListener("error", () => this.eraseAll());
+
+    this.connection.addEventListener("start", (event) =>
+      this.handleStart(event)
+    );
+    this.connection.addEventListener("restart", (event) =>
+      this.handleRestart(event)
+    );
+    this.connection.addEventListener("move", (event) => this.handleMove(event));
+    this.connection.addEventListener("close", () => this.eraseAll());
+    this.connection.addEventListener("error", () => this.eraseAll());
 
     const restartButton = document.getElementById(restartButtonId);
     if (restartButton) {
@@ -105,9 +148,9 @@ class Game {
       return;
     }
 
-    arrowLeft.addEventListener("click", () => this.move(LEFT_CODE));
-    arrowRight.addEventListener("click", () => this.move(RIGHT_CODE));
-    arrowDown.addEventListener("click", () => this.move(DOWN_CODE));
+    arrowLeft.addEventListener("click", () => this.move(LEFT));
+    arrowRight.addEventListener("click", () => this.move(RIGHT));
+    arrowDown.addEventListener("click", () => this.move(DOWN));
 
     window.addEventListener("keydown", (event) => {
       switch (event.key) {
@@ -120,78 +163,55 @@ class Game {
       }
     });
   }
-
   /**
-   *
-   * @param {MessageEvent<string>} event
+   * @param {GameConnectionEventData}
    */
-  onMessage(event) {
-    const { data } = event;
+  setGameResponse({ detail }) {
+    const { client, room } = detail;
+    this.room = room;
+    const { game } = client;
+    this.player = client.player_id;
+    this.roomId = client.room_id;
+    this.name = client.name;
+
+    this.actualPlayer = game.actual_player;
+    this.actualPosition = game.actual_position;
+    this.board = game.board;
+    this.rows = game.rows;
+    this.columns = game.columns;
+    this.isComingDown = game.is_coming_down;
+    this.isGameOver = game.is_game_over;
+    this.movement = game.movement;
+  }
+  /**
+   * @param {GameConnectionEventData}
+   */
+  handleStart(event) {
+    const waitingBlock = document.getElementById(waitingBlockId);
+    if (waitingBlock) {
+      waitingBlock.style.display = "none";
+    }
+    this.setGameResponse(event);
     const gameBlock = document.getElementById(gameBlockId);
     if (!gameBlock) {
       return;
     }
     gameBlock.style.display = "block";
-    try {
-      /**
-       * @type {{
-       *  player: number,
-       *  room_id: number,
-       *  game: {
-       *    rows: number,
-       *    columns: number
-       *    movement: Array<number>,
-       *    board: Array<Array<number>>,
-       *    actual_player: number,
-       *    actual_position: {
-       *      row: number,
-       *      column: number
-       *    },
-       *    is_coming_down: boolean,
-       *    is_game_over: boolean
-       *  }
-       * }}
-       */
-      const response = JSON.parse(data);
-      this.player = response.player;
-      this.roomId = response.room_id;
-      const {
-        actual_player,
-        actual_position,
-        board,
-        columns,
-        is_coming_down,
-        is_game_over,
-        movement,
-        rows,
-      } = response.game;
-      this.actualPlayer = actual_player;
-      this.actualPosition = actual_position;
-      this.board = board;
-      this.rows = rows;
-      this.columns = columns;
-      this.isComingDown = is_coming_down;
-      this.isGameOver = is_game_over;
-      this.movement = movement;
+    this.render();
+  }
+  /**
+   * @param {GameConnectionEventData}
+   */
+  handleRestart(event) {
+    this.handleMove(event);
+  }
 
-      const gameOverBlock = document.getElementById(gameOverBlockId);
-      if (this.isGameOver) {
-        if (gameOverBlock) {
-          gameOverBlock.style.display = "flex";
-        }
-        const winnerPlayer = document.getElementById(winnerPlayerId);
-        if (winnerPlayer) {
-          winnerPlayer.textContent = this.actualPlayer;
-        }
-      } else {
-        if (gameOverBlock) {
-          gameOverBlock.style.display = "none";
-        }
-        this.render();
-      }
-    } catch (error) {
-      console.error("Wrong message from server", error);
-    }
+  /**
+   * @param {GameConnectionEventData}
+   */
+  handleMove(event) {
+    this.setGameResponse(event);
+    this.render();
   }
 
   /**
@@ -209,10 +229,10 @@ class Game {
     this.connection.socket.send(
       JSON.stringify({
         room_id: this.roomId,
+        player_id: this.player,
         data: {
-          player: this.player,
           action: "move",
-          direction,
+          payload: direction,
         },
       })
     );
@@ -220,22 +240,66 @@ class Game {
 
   render() {
     this.renderDetails();
-    this.renderMovement();
-    this.renderBoard();
+    if (!this.isGameOver) {
+      this.renderMovement();
+      this.renderBoard();
+    }
   }
 
   renderDetails() {
-    const numberPlayer = document.getElementById(numberPlayerId);
-    if (numberPlayer) {
-      numberPlayer.className = `player player-${this.player}`;
-    }
-    const numberGame = document.getElementById(numberGameId);
-    if (numberGame) {
-      numberGame.textContent = this.roomId;
-    }
-    const numberCurrent = document.getElementById(numberCurrentId);
-    if (numberCurrent) {
-      numberCurrent.className = `player player-${this.actualPlayer}`;
+    const gameOverBlock = document.getElementById(gameOverBlockId);
+    const detailsBlock = document.getElementById(detailsBlockId);
+
+    if (this.isGameOver) {
+      const winnerPlayer = document.getElementById(winnerPlayerId);
+      if (winnerPlayer) {
+        winnerPlayer.textContent =
+          this.actualPlayer === this.player
+            ? this.name
+            : this.room?.clients
+                ?.filter(({ player_id }) => player_id !== this.player)
+                ?.shift()?.name || "";
+      }
+      if (detailsBlock) {
+        detailsBlock.style.display = "none";
+      }
+      if (gameOverBlock) {
+        gameOverBlock.style.display = "flex";
+      }
+    } else {
+      const numberPlayer = document.getElementById(numberPlayerId);
+      if (numberPlayer) {
+        numberPlayer.className = `player player-${this.player}`;
+      }
+      const namePlayer = document.getElementById(namePlayerId);
+      if (namePlayer) {
+        namePlayer.textContent = this.name;
+      }
+      const numberGame = document.getElementById(numberGameId);
+      if (numberGame) {
+        numberGame.textContent = this.roomId;
+      }
+      const numberCurrentPlayer = document.getElementById(
+        numberCurrentPlayerId
+      );
+      if (numberCurrentPlayer) {
+        numberCurrentPlayer.className = `player player-${this.actualPlayer}`;
+      }
+      const nameCurrentPlayer = document.getElementById(nameCurrentPlayerId);
+      if (nameCurrentPlayer) {
+        nameCurrentPlayer.textContent =
+          this.actualPlayer === this.player
+            ? this.name
+            : this.room?.clients
+                ?.filter(({ player_id }) => player_id !== this.player)
+                ?.shift()?.name || "";
+      }
+      if (gameOverBlock) {
+        gameOverBlock.style.display = "none";
+      }
+      if (detailsBlock) {
+        detailsBlock.style.display = "flex";
+      }
     }
   }
 
@@ -273,6 +337,7 @@ class Game {
     this.connection.socket.send(
       JSON.stringify({
         room_id: this.roomId,
+        player_id: this.player,
         data: {
           action: "restart",
         },
@@ -283,15 +348,23 @@ class Game {
   eraseAll() {
     const numberPlayer = document.getElementById(numberPlayerId);
     if (numberPlayer) {
-      numberPlayer.textContent = "";
+      numberPlayer.className = "";
+    }
+    const namePlayer = document.getElementById(namePlayerId);
+    if (namePlayer) {
+      namePlayer.textContent = "";
     }
     const numberGame = document.getElementById(numberGameId);
     if (numberGame) {
       numberGame.textContent = "";
     }
-    const numberCurrent = document.getElementById(numberCurrentId);
-    if (numberCurrent) {
-      numberCurrent.textContent = "";
+    const numberCurrentPlayer = document.getElementById(numberCurrentPlayerId);
+    if (numberCurrentPlayer) {
+      numberCurrentPlayer.className = "";
+    }
+    const nameCurrentPlayer = document.getElementById(nameCurrentPlayerId);
+    if (nameCurrentPlayer) {
+      nameCurrentPlayer.textContent = "";
     }
     const movementBlock = document.getElementById(movementBlockId);
     if (movementBlock) {
@@ -304,6 +377,14 @@ class Game {
     const gameBlock = document.getElementById(gameBlockId);
     if (gameBlock) {
       gameBlock.style.display = "none";
+    }
+    const connectBlock = document.getElementById(connectBlockId);
+    if (connectBlock) {
+      connectBlock.style.display = "block";
+    }
+    const waitingBlock = document.getElementById(waitingBlockId);
+    if (waitingBlock) {
+      waitingBlock.style.display = "none";
     }
   }
 }

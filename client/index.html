@@ -9,7 +9,7 @@
   <body>
     <div id="game">
       <div id="title">
-        <h1 class="shadow">4 In Line</h1>
+        <h3 class="shadow">4 In Line</h3>
       </div>
       <div id="details">
         <div class="shadow">
@@ -17,6 +17,7 @@
             <b>
               Player:
               <span id="number-player"></span>
+              <span id="name-player"></span>
             </b>
           </p>
           <p>
@@ -29,9 +30,16 @@
             <b>
               Player Turn:
               <span id="number-current-player"></span>
+              <span id="name-current-player"></span>
             </b>
           </p>
         </div>
+      </div>
+      <div id="game-over">
+        <div class="shadow">
+          <b>Player <span id="winner-player"></span> has won</b>
+        </div>
+        <button class="shadow-button" id="restart">restart</button>
       </div>
       <div id="movement"></div>
       <div id="board"></div>
@@ -61,15 +69,27 @@
           />
         </button>
       </div>
-      <div id="game-over">
-        <div class="shadow">
-          <b>Player <span id="winner-player"></span> has won</b>
-        </div>
-        <button class="shadow-button" id="restart">restart</button>
-      </div>
     </div>
     <div id="connection">
-      <button class="shadow-button">connect</button>
+      <div id="connect">
+        <input
+          type="text"
+          class="shadow"
+          id="input-name-player"
+          placeholder="Type your name"
+        />
+        <button class="shadow-button">connect</button>
+      </div>
+      <div id="waiting" class="shadow">
+        <div class="wrapper">
+          <div class="circle"></div>
+          <div class="circle"></div>
+          <div class="circle"></div>
+          <div class="shadow-circle"></div>
+          <div class="shadow-circle"></div>
+          <div class="shadow-circle"></div>
+        </div>
+      </div>
     </div>
     <div id="logs"></div>
   </body>

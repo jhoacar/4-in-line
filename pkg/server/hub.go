@@ -3,156 +3,126 @@ package server
 import (
 	"encoding/json"
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/jhoacar/4-in-line/internal/entities"
 	"github.com/jhoacar/4-in-line/internal/entities/dtos"
-	"github.com/jhoacar/4-in-line/pkg/game"
 )
 
 const animationComingDownSpeed = 50 * time.Millisecond
 
-type Data struct {
-	Action    string `json:"action"`
-	Direction int    `json:"direction"`
-	Player    int    `json:"player"`
-}
-
-type Message struct {
-	RoomId int  `json:"room_id"`
-	Data   Data `json:"data"`
-}
-
-// Hub maintains the set of active clients and broadcasts messages to the
-// clients.
-type Hub struct {
-	// Registered clients by room
-	rooms map[int]map[*Client]bool
-
-	// Inbound messages from the clients.
-	broadcast chan Message
-
-	// Register requests from the clients.
-	register chan *Client
-
-	// Unregister requests from clients.
-	unregister chan *Client
-}
-
-func newHub() *Hub {
-	return &Hub{
-		broadcast:  make(chan Message),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		rooms:      make(map[int]map[*Client]bool),
+func NewHub() *dtos.Hub {
+	return &dtos.Hub{
+		BroadcastChannel:  make(chan []byte),
+		RegisterChannel:   make(chan *dtos.Client),
+		UnregisterChannel: make(chan *dtos.Client),
+		Rooms:             make(map[int]map[*dtos.Client]bool),
 	}
 }
 
-func sendResponse(room map[*Client]bool, g *game.MainGame) {
+func SendResponseToRoom(room map[*dtos.Client]bool, action string) {
+	clients := dtos.Room{
+		Clients: GetClientsByRoom(room),
+	}
 	for client := range room {
-		response, err := json.Marshal(dtos.ClientResponse{
-			Player: client.player,
-			RoomId: client.roomId,
-			Game:   g.GameAttributes,
+		response, err := json.Marshal(dtos.ClientResponseGame{
+			Action: action,
+			Client: client,
+			Room:   clients,
 		})
 		if err != nil {
-			log.Println(
-				"Error sending client message",
-				err,
-			)
+			log.Println("> Error sending client message", err)
 		} else {
-			client.send <- []byte(
+			client.SendChannel <- []byte(
 				response,
 			)
 		}
 	}
 }
 
-func (h *Hub) run() {
+func RegisterClient(client *dtos.Client, hub *dtos.Hub) {
+	log.Printf("> Registering Client | player [%d] | room: [%d] ", client.PlayerID, client.RoomId)
+
+	room := hub.Rooms[client.RoomId]
+	if room == nil {
+		// First client in the room, create a new one
+		room = make(map[*dtos.Client]bool)
+		hub.Rooms[client.RoomId] = room
+	}
+	room[client] = true
+	if len(room) == MAX_PLAYERS_BY_ROOM {
+		SendResponseToRoom(room, dtos.GAME_START_ACTION)
+	}
+}
+
+func UnregisterClient(client *dtos.Client, hub *dtos.Hub) {
+	log.Printf("> Unregistering Client | player [%d] | room: [%d] ", client.PlayerID, client.RoomId)
+
+	room := hub.Rooms[client.RoomId]
+	if room != nil {
+		for client := range room {
+			delete(room, client)
+			close(client.SendChannel)
+		}
+		delete(hub.Rooms, client.RoomId)
+	}
+}
+
+func HandleIncomingMessage(message []byte, hub *dtos.Hub) {
+
+	var request dtos.ClientRequest
+
+	error := json.Unmarshal(message, &request)
+
+	if error != nil {
+		log.Printf("> Unable to parse request %v", message)
+		return
+	}
+
+	room := hub.Rooms[request.RoomId]
+
+	if room == nil {
+		log.Printf("> Room %d is empty", request.RoomId)
+		return
+	}
+
+	log.Printf("> Processing %v | player [%d] | room: [%d] ", request.Data, request.PlayerId, request.RoomId)
+
+	g := GetGameByRoom(room)
+
+	if request.Data.Action == dtos.MOVE {
+		if g.ActualPlayer == request.PlayerId {
+			if request.Data.Payload == dtos.DOWN {
+				for comingDown := true; comingDown; comingDown = g.IsComingDown {
+					g.Move(entities.DOWN)
+					SendResponseToRoom(room, request.Data.Action)
+					time.Sleep(animationComingDownSpeed)
+				}
+			} else {
+				g.Move(GetDirectionEntityByDto(request.Data.Payload))
+				SendResponseToRoom(room, request.Data.Action)
+			}
+		}
+	} else if request.Data.Action == dtos.GAME_RESTART_ACTION {
+		g.RestartGame()
+		SendResponseToRoom(room, request.Data.Action)
+	}
+
+	if len(room) == 0 {
+		// The room was emptied while broadcasting to the room.  Delete the room.
+		delete(hub.Rooms, request.RoomId)
+	}
+}
+
+func Run(hub *dtos.Hub) {
 	for {
 		select {
-		case client := <-h.register:
-			log.Println(
-				"Registering Client to Room Id: ",
-				strconv.FormatInt(int64(client.roomId), 10),
-			)
-			room := h.rooms[client.roomId]
-			if room == nil {
-				// First client in the room, create a new one
-				room = make(map[*Client]bool)
-				h.rooms[client.roomId] = room
-			}
-			room[client] = true
-			object := *client.game
-
-			welcome, err := json.Marshal(dtos.ClientResponse{
-				Player: len(room),
-				RoomId: client.roomId,
-				Game:   object.GameAttributes,
-			})
-			if err != nil {
-				log.Println(
-					"Error sending welcome message",
-					err,
-				)
-			} else {
-				client.send <- []byte(
-					welcome,
-				)
-			}
-		case client := <-h.unregister:
-			room := h.rooms[client.roomId]
-			log.Println(
-				"Unregistering Client to Room Id: ",
-				strconv.FormatInt(int64(client.roomId), 10),
-			)
-			if room != nil {
-				if _, ok := room[client]; ok {
-					delete(room, client)
-					close(client.send)
-					if len(room) == 0 {
-						// This was last client in the room, delete the room
-						delete(h.rooms, client.roomId)
-					}
-				}
-			}
-		case message := <-h.broadcast:
-			room := h.rooms[message.RoomId]
-			log.Println(
-				"Processing: ",
-				message.Data,
-			)
-			if room != nil {
-				var g *game.MainGame = nil
-				for client := range room {
-					g = client.game
-					break
-				}
-
-				if g.ActualPlayer == message.Data.Player {
-					if message.Data.Action == "move" {
-						if message.Data.Direction == entities.DOWN {
-							for comingDown := true; comingDown; comingDown = g.IsComingDown {
-								g.Move(message.Data.Direction)
-								sendResponse(room, g)
-								time.Sleep(animationComingDownSpeed)
-							}
-						} else {
-							g.Move(message.Data.Direction)
-							sendResponse(room, g)
-						}
-					}
-				} else if message.Data.Action == "restart" {
-					g.RestartGame()
-					sendResponse(room, g)
-				}
-
-				if len(room) == 0 {
-					// The room was emptied while broadcasting to the room.  Delete the room.
-					delete(h.rooms, message.RoomId)
-				}
-			}
+		case client := <-hub.RegisterChannel:
+			RegisterClient(client, hub)
+		case client := <-hub.UnregisterChannel:
+			UnregisterClient(client, hub)
+		case message := <-hub.BroadcastChannel:
+			HandleIncomingMessage(message, hub)
 		}
 	}
 }

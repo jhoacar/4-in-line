@@ -1,7 +1,15 @@
 package main
 
-import "github.com/jhoacar/4-in-line/pkg/server"
+import (
+	"flag"
+
+	"github.com/jhoacar/4-in-line/pkg/server"
+)
+
+var argPort = flag.String("port", "80", "port of server")
+var clientFolder = flag.String("client", "client", "folder to serve client")
 
 func main() {
-	server.StartServer()
+	flag.Parse()
+	server.StartServer(*argPort, *clientFolder)
 }

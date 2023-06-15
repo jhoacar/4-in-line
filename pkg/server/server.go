@@ -1,73 +1,39 @@
 package server
 
 import (
-	"flag"
 	"log"
 	"net/http"
 	"os"
-	"path"
-	"path/filepath"
-	"strconv"
-	"strings"
 )
 
-var argPort = flag.Int("port", 80, "port of server")
-var clientFolder = flag.String("client", "client", "folder to serve client")
+func GetServerAddress(port string) string {
 
-func serveClient(w http.ResponseWriter, r *http.Request) {
-
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	ex, er := os.Executable()
-	if er != nil {
-		panic(er)
-	}
-	clientPath := *clientFolder
-
-	if strings.HasPrefix(clientPath, "..") {
-		exPath := filepath.Dir(ex)
-		clientPath = path.Join(exPath, *clientFolder)
-	}
-
-	file := r.URL.Path
-
-	if file == "/" {
-		file = "/index.html"
-	}
-
-	filePath := clientPath + file
-	log.Println("GET " + file)
-	http.ServeFile(w, r, filePath)
-}
-
-func StartServer() {
-
-	addr := ":"
 	envPort := os.Getenv("PORT")
 
-	if len(envPort) != 0 {
-		addr = addr + envPort
-	} else {
-		addr = addr + strconv.Itoa(*argPort)
-
+	if len(port) == 0 && len(envPort) == 0 {
+		return ":80"
+	} else if len(port) == 0 {
+		return ":" + envPort
 	}
+	return ":" + port
+}
 
-	flag.Parse()
+func StartServer(port string, clientFolder string) {
 
-	hub := newHub()
-	go hub.run()
+	hub := NewHub()
 
-	http.HandleFunc("/", serveClient)
+	go Run(hub)
 
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		ServeFrontend(clientFolder, w, r)
+	})
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		serveWs(hub, w, r)
+		ServeWebsocket(hub, w, r)
 	})
 
-	log.Printf("Server running on %s", addr)
-	log.Printf("Serving %s", *clientFolder)
+	address := GetServerAddress(port)
 
-	log.Fatal(http.ListenAndServe(addr, nil))
+	log.Printf("> Serving %s", clientFolder)
+	log.Printf("> Server running on %s", address)
+	log.Fatal(http.ListenAndServe(address, nil))
 }

@@ -2,12 +2,11 @@ package server
 
 import (
 	"bytes"
-	"encoding/json"
 	"log"
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/jhoacar/4-in-line/pkg/game"
+	"github.com/jhoacar/4-in-line/internal/entities/dtos"
 )
 
 const (
@@ -29,99 +28,77 @@ var (
 	space   = []byte{' '}
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
+// ReadPump pumps messages from the websocket connection to the hub.
+func ReadPump(client *dtos.Client) {
 
-// Client is a middleman between the websocket connection and the hub.
-type Client struct {
-	game   *game.MainGame
-	roomId int
-	player int
-
-	hub *Hub
-
-	// The websocket connection.
-	conn *websocket.Conn
-
-	// Buffered channel of outbound messages.
-	send chan []byte
-}
-
-// readPump pumps messages from the websocket connection to the hub.
-//
-// The application runs readPump in a per-connection goroutine. The application
-// ensures that there is at most one reader on a connection by executing all
-// reads from this goroutine.
-func (c *Client) readPump() {
 	defer func() {
-		c.hub.unregister <- c
-		c.conn.Close()
+		client.Hub.UnregisterChannel <- client
+		client.Connection.Close()
 	}()
-	c.conn.SetReadLimit(maxMessageSize)
-	c.conn.SetReadDeadline(time.Now().Add(pongWait))
-	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+
+	client.Connection.SetReadLimit(maxMessageSize)
+
+	client.Connection.SetReadDeadline(time.Now().Add(pongWait))
+
+	client.Connection.SetPongHandler(func(string) error {
+		client.Connection.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
+
 	for {
-		_, message, err := c.conn.ReadMessage()
+		_, message, err := client.Connection.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error: %v", err)
+				log.Printf("> Error: %v", err)
 			}
 			break
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		var result Message
-		err = json.Unmarshal(message, &result)
-		if err != nil {
-			log.Println(string(message), err)
-			break
-		}
-		c.hub.broadcast <- result
 
+		client.Hub.BroadcastChannel <- message
 	}
 }
 
-// writePump pumps messages from the hub to the websocket connection.
+// WritePump pumps messages from the hub to the websocket connection.
 //
 // A goroutine running writePump is started for each connection. The
 // application ensures that there is at most one writer to a connection by
 // executing all writes from this goroutine.
-func (c *Client) writePump() {
+func WritePump(client *dtos.Client) {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		c.conn.Close()
+		client.Connection.Close()
 	}()
 	for {
 		select {
-		case message, ok := <-c.send:
-			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+		case message, ok := <-client.SendChannel:
+			client.Connection.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The hub closed the channel.
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				client.Connection.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 
-			w, err := c.conn.NextWriter(websocket.TextMessage)
+			w, err := client.Connection.NextWriter(websocket.TextMessage)
 			if err != nil {
 				return
 			}
 			w.Write(message)
 
 			// Add queued chat messages to the current websocket message.
-			n := len(c.send)
+			n := len(client.SendChannel)
 			for i := 0; i < n; i++ {
 				w.Write(newline)
-				w.Write(<-c.send)
+				w.Write(<-client.SendChannel)
 			}
 
 			if err := w.Close(); err != nil {
 				return
 			}
 		case <-ticker.C:
-			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			client.Connection.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := client.Connection.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
 		}
